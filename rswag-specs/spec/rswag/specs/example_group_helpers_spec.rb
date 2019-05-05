@@ -86,6 +86,18 @@ module Rswag
         end
       end
 
+      describe '#custom_property(attributes)' do
+        before do
+          subject.custom_property(name: 'x-something', value: 'x-value')
+        end
+
+        let(:api_metadata) { { operation: {} } }
+
+        it "adds to the 'operation' metadata" do
+          expect(api_metadata[:operation]['x-something']).to eq('x-value')
+        end
+      end
+
       describe '#parameter(attributes)' do
 
         context "when called at the 'path' level" do
