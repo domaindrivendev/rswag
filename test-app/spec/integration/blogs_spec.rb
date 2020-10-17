@@ -1,6 +1,6 @@
 require 'swagger_helper'
 
-RSpec.describe 'Blogs API', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Blogs API', type: :request, swagger_doc: 'v1/swagger.yaml' do
   let(:api_key) { 'fake_key' }
 
   path '/blogs' do
@@ -10,19 +10,35 @@ RSpec.describe 'Blogs API', type: :request, swagger_doc: 'v1/swagger.json' do
       operationId 'createBlog'
       consumes 'application/json'
       produces 'application/json'
-      parameter name: :blog, in: :body, schema: { '$ref' => '#/definitions/blog' }
-
-      let(:blog) { { title: 'foo', content: 'bar' } }
+      parameter name: :params, in: :body, schema: {
+        type: :object,
+        properties: {
+          blog: {
+            '$ref' => '#/components/schemas/blog'
+          }
+        },
+        required: ['blog']
+      }
 
       response '201', 'blog created' do
-        # schema '$ref' => '#/definitions/blog'
+        schema '$ref' => '#/components/schemas/blog'
+        let!(:params) { { blog: { title: 'foo', content: 'bar' } } }
+
+        after do |example|
+          example.metadata[:response][:content] = {
+            'application/json' => {
+              example: JSON.parse(response.body, symbolize_names: true)
+            }
+          }
+        end
+
         run_test!
       end
 
       response '422', 'invalid request' do
-        schema '$ref' => '#/definitions/errors_object'
+        schema '$ref' => '#/components/schemas/errors_object'
 
-        let(:blog) { { title: 'foo' } }
+        let(:params) { { blog: { title: 'foo' } } }
         run_test! do |response|
           expect(response.body).to include("can't be blank")
         end
@@ -39,7 +55,7 @@ RSpec.describe 'Blogs API', type: :request, swagger_doc: 'v1/swagger.json' do
       let(:keywords) { 'foo bar' }
 
       response '200', 'success' do
-        schema type: 'array', items: { '$ref' => '#/definitions/blog' }
+        schema type: 'array', items: { '$ref' => '#/components/schemas/blog' }
       end
 
       response '406', 'unsupported accept header' do
@@ -59,15 +75,15 @@ RSpec.describe 'Blogs API', type: :request, swagger_doc: 'v1/swagger.json' do
 
       parameter name: :flexible_blog, in: :body, schema: {
         oneOf: [
-          { '$ref' => '#/definitions/blog' },
-          { '$ref' => '#/definitions/flexible_blog' }
+          { '$ref' => '#/components/schemas/blog' },
+          { '$ref' => '#/components/schemas/flexible_blog' }
         ]
       }
 
       let(:flexible_blog) { { blog: { headline: 'my headline', text: 'my text' } } }
 
       response '201', 'flexible blog created' do
-        schema oneOf: [{ '$ref' => '#/definitions/blog' }, { '$ref' => '#/definitions/flexible_blog' }]
+        schema oneOf: [{ '$ref' => '#/components/schemas/blog' }, { '$ref' => '#/components/schemas/flexible_blog' }]
         run_test!
       end
     end
@@ -86,11 +102,11 @@ RSpec.describe 'Blogs API', type: :request, swagger_doc: 'v1/swagger.json' do
       produces 'application/json'
 
       response '200', 'blog found' do
-        header 'ETag', type: :string
-        header 'Last-Modified', type: :string
-        header 'Cache-Control', type: :string
+        header 'ETag', schema: {type: :string}
+        header 'Last-Modified', schema: {type: :string}
+        header 'Cache-Control', schema: {type: :string}
 
-        schema '$ref' => '#/definitions/blog'
+        schema '$ref' => '#/components/schemas/blog'
 
         examples 'application/json' => {
           id: 1,
@@ -121,7 +137,7 @@ RSpec.describe 'Blogs API', type: :request, swagger_doc: 'v1/swagger.json' do
       description 'Upload a thumbnail for specific blog by id'
       operationId 'uploadThumbnailBlog'
       consumes 'multipart/form-data'
-      parameter name: :file, :in => :formData, :type => :file, required: true
+      parameter name: :file, in: :formData, type: :string, format: :binary, required: true
 
       response '200', 'blog updated' do
         let(:file) { Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/thumbnail.png")) }
