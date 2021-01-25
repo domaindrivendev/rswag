@@ -124,19 +124,55 @@ module Rswag
         # Accept header
         mime_list = Array(metadata[:operation][:produces] || swagger_doc[:produces])
         target_node = metadata[:response]
-        upgrade_content!(mime_list, target_node)
+        target_node.merge!(content: {})
+        upgrade_schema!(mime_list, target_node)
+        upgrade_examples!(mime_list, target_node)
         metadata[:response].delete(:schema)
+        metadata[:response].delete(:example)
+        metadata[:response].delete(:examples)
       end
 
-      def upgrade_content!(mime_list, target_node)
-        target_node.merge!(content: {})
+      def upgrade_schema!(mime_list, target_node)
         schema = target_node[:schema]
         return if mime_list.empty? || schema.nil?
 
-        mime_list.each do |mime_type|
-          # TODO upgrade to have content-type specific schema
-          target_node[:content][mime_type] = { schema: schema }
+        set_mime_list_contents!(target_node, mime_list, :schema, schema)
+      end
+
+      def upgrade_examples!(mime_list, target_node)
+        example = target_node[:example]
+        examples = target_node[:examples]
+
+        if example
+          set_mime_list_contents!(target_node, mime_list, :example, example)
+        elsif examples
+          #check if examples contains mime_types from swagger2.0 response example style
+          non_mime_type_examples = {}
+          examples.each do |key, value|
+            if mime_list.include? key
+              set_mime_type_content!(target_node, key, :example, value)
+            else
+              non_mime_type_examples[key] = value
+            end
+          end
+          unless non_mime_type_examples.empty?
+            set_mime_list_contents!(target_node, mime_list, :examples, non_mime_type_examples)
+          end
         end
+      end
+
+      def set_mime_list_contents!(target_node, mime_list, key, value)
+        # TODO: upgrade to have content-type specific schema and examples
+        mime_list.each do |mime_type|
+          set_mime_type_content!(target_node, mime_type, key, value)
+        end
+      end
+
+      def set_mime_type_content!(target_node, mime_type, key, value)
+        if target_node[:content][mime_type].nil?
+          target_node[:content][mime_type] = {}
+        end
+        target_node[:content][mime_type][key] = value
       end
 
       def upgrade_request_type!(metadata)
