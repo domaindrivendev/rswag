@@ -895,6 +895,16 @@ rails g rswag:ui:custom
 
 This will add a local version that you can modify at _app/views/rswag/ui/home/index.html.erb_
 
+### Set UI to use specific path
+rswag-ui will defualt to adding `/index.html` to the mounted engine path. If you can't support pages ending in `.html` or need it to be something else, configure it like this:
+
+```
+Rswag::Ui.configure do |c|
+  c.index = "/some_other_path"
+end
+```
+__note__: this must start with a `/`
+
 ### Serve UI Assets Directly from your Web Server
 
 Rswag ships with an embedded version of the [swagger-ui](https://github.com/swagger-api/swagger-ui), which is a static collection of JavaScript and CSS files. These assets are served by the rswag-ui middleware. However, for optimal performance you may want to serve them directly from your web server (e.g. Apache or NGINX). To do this, you'll need to copy them to the web server root. This is the "public" folder in a typical Rails application.
