@@ -154,14 +154,22 @@ module Rswag
           tuples << ['Content-Type', content_type]
         end
 
+        # Host header
+        host = metadata[:operation][:host] || swagger_doc[:host]
+        if host
+          host = example.respond_to?(:'Host') ? example.send(:'Host') : host
+          tuples << [ 'Host', host ]
+        end
+
         # Rails test infrastructure requires rackified headers
         rackified_tuples = tuples.map do |pair|
           [
             case pair[0]
-            when 'Accept' then 'HTTP_ACCEPT'
-            when 'Content-Type' then 'CONTENT_TYPE'
-            when 'Authorization' then 'HTTP_AUTHORIZATION'
-            else pair[0]
+              when 'Accept' then 'HTTP_ACCEPT'
+              when 'Content-Type' then 'CONTENT_TYPE'
+              when 'Authorization' then 'HTTP_AUTHORIZATION'
+              when 'Host' then 'HTTP_HOST'
+              else pair[0]
             end,
             pair[1]
           ]
